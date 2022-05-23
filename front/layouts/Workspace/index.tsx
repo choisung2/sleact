@@ -1,4 +1,5 @@
 import {
+  AddButton,
   Channels,
   Chats,
   Header,
@@ -7,6 +8,7 @@ import {
   ProfileImg,
   ProfileModal,
   RightMenu,
+  WorkspaceButton,
   WorkspaceName,
   Workspaces,
   WorkspaceWrapper,
@@ -18,11 +20,13 @@ import { Navigate } from 'react-router';
 import useSWR from 'swr';
 import gravatar from 'gravatar';
 import Menu from '@components/Menu';
+import { Link } from 'react-router-dom';
+import { IUser } from '@typings/db';
 
 const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const { data, error, mutate } = useSWR('http://localhost:3095/api/users', fetcher, {
+  const { data: userData, error, mutate } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
     dedupingInterval: 2000,
   });
 
@@ -40,7 +44,11 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
     setShowUserMenu((prev) => !prev);
   }, []);
 
-  if (!data) {
+  const onClickCreateWorkspace = useCallback(() => {
+
+  }, [])
+
+  if (!userData) {
     return <Navigate to="/login" />;
   }
 
@@ -49,13 +57,13 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
       <Header>test</Header>
       <RightMenu>
         <span onClick={onClickUserProfile}>
-          <ProfileImg src={gravatar.url(data.email, { s: '28px', d: 'retro' })} alt={data.email} />
+          <ProfileImg src={gravatar.url(userData.email, { s: '28px', d: 'retro' })} alt={userData.email} />
           {showUserMenu && (
             <Menu style={{ right: 0, top: 38 }} show={showUserMenu} onCloseModal={onClickUserProfile}>
               <ProfileModal>
-                <img src={gravatar.url(data.email, { s: '36px', d: 'retro' })} alt={data.email} />
+                <img src={gravatar.url(userData.email, { s: '36px', d: 'retro' })} alt={userData.email} />
                 <div>
-                  <span id="profile-name">{data.email}</span>
+                  <span id="profile-name">{userData.email}</span>
                   <span id="profile-active">Active</span>
                 </div>
               </ProfileModal>
@@ -65,7 +73,15 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
         </span>
       </RightMenu>
       <WorkspaceWrapper>
-        <Workspaces>test</Workspaces>
+        <Workspaces>{userData?.Workspaces.map((v) => {
+          return (
+            <Link key={v.id} to={`/workspace/${123}/channel/일반`}>
+              <WorkspaceButton>{v.name.slice(0, 1).toUpperCase()}</WorkspaceButton>
+            </Link>
+          )
+        })}
+          <AddButton onClick={onClickCreateWorkspace}>+</AddButton>
+        </Workspaces>
         <Channels>
           <WorkspaceName>Sleact</WorkspaceName>
           <MenuScroll>MenuScroll</MenuScroll>
