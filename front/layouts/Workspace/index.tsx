@@ -22,9 +22,16 @@ import gravatar from 'gravatar';
 import Menu from '@components/Menu';
 import { Link } from 'react-router-dom';
 import { IUser } from '@typings/db';
+import { Button, Input, Label } from '@pages/SignUp/styles';
+import useInput from '@hooks/useInput';
+import Modal from '@components/Modal';
 
 const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
+  const [newWorkspace, onChangeNewWorkspace, setNewWorkspace] = useInput('')
+  const [newUrl, onChangeNewUrl, setNewUrl] = useInput('')
+  const [changeUrl, onChangeUrl, setChangeUrl] = useInput('')
 
   const { data: userData, error, mutate } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
     dedupingInterval: 2000,
@@ -41,11 +48,20 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   }, []);
 
   const onClickUserProfile = useCallback(() => {
+    console.log('click')
     setShowUserMenu((prev) => !prev);
   }, []);
 
   const onClickCreateWorkspace = useCallback(() => {
+    setShowCreateWorkspaceModal(true)
+  }, [])
 
+  const onCreateWorkspace = useCallback(() => {
+    setShowCreateWorkspaceModal(false)
+  }, [])
+
+  const onCloseModal = useCallback(() => {
+    console.log('close')
   }, [])
 
   if (!userData) {
@@ -88,7 +104,20 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
         </Channels>
         <Chats>Chats</Chats>
       </WorkspaceWrapper>
-      {children}
+      <Modal show={showCreateWorkspaceModal} onCloseModal={onCloseModal}>
+        <form onSubmit={onCreateWorkspace}>
+          <Label id="workspace-label">
+            <span>워크스페이스 이름</span>
+            <Input id="workspace" value={newWorkspace} onChange={onChangeNewWorkspace} />
+          </Label>
+          <Label id="workspace-url-label">
+            <span>워크스페이스 이름</span>
+            <Input id="workspace" value={newUrl} onChange={onChangeUrl} />
+          </Label>
+          <Button type="submit">생성하기</Button>
+        </form>
+      </Modal>
+      {/* {children} */}
     </div>
   );
 };
