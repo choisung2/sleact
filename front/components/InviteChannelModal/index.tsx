@@ -13,49 +13,44 @@ interface Props {
   children?: ReactNode;
   show: boolean;
   onCloseModal: () => void;
-  setShowCreateChannelModal: (flag: boolean) => void;
+  setShowInviteChannelModal: (flag: boolean) => void;
 }
 
-const CreateChannelModal: FC<Props> = ({ children, show, onCloseModal, setShowCreateChannelModal }) => {
-  const [newChannel, onChangeNewChannel, setNewChannel] = useInput('');
+const InviteChannelModal: FC<Props> = ({ children, show, onCloseModal, setShowInviteChannelModal }) => {
+  const [newMember, onChangeNewMember, setNewMember] = useInput('');
   const { workspace, channel } = useParams<{ workspace: string; channel: string }>();
 
-  const {
-    data: userData,
-    error,
-    mutate,
-  } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
-    dedupingInterval: 2000,
-  });
+  const { data: userData } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher);
 
-  const { data: channelData, mutate: channelMutate } = useSWR<IChannel[]>(
-    userData ? `http://localhost:3095/api/workspaces/${workspace}/channels` : null,
+  const { mutate: channelMutate } = useSWR<IUser[]>(
+    userData ? `http://localhost:3095/api/workspaces/${workspace}/channels/${channel}/members` : null,
     fetcher,
   );
 
-  const onCreateChannel = useCallback(
+  const onInviteMember = useCallback(
     (e: any) => {
       e.preventDefault();
+      if (!newMember || !newMember.trim()) return;
       axios
         .post(
-          `http://localhost:3095/api/workspaces/${workspace}/channels`,
+          `http://localhost:3095/api/workspaces/${workspace}/channels/${channel}/members`,
           {
-            name: newChannel,
+            email: newMember,
           },
           {
             withCredentials: true,
           },
         )
         .then((res) => {
-          setShowCreateChannelModal(false);
           channelMutate(res.data, false);
-          setNewChannel('');
+          setShowInviteChannelModal(false);
+          setNewMember('');
         })
         .catch((err) => {
           toast.error(err.response?.data, { position: 'bottom-center' });
         });
     },
-    [newChannel],
+    [workspace, channel, newMember],
   );
 
   const stopPropagation = useCallback((e: { stopPropagation: () => void }) => {
@@ -68,15 +63,15 @@ const CreateChannelModal: FC<Props> = ({ children, show, onCloseModal, setShowCr
 
   return (
     <Modal show={show} onCloseModal={onCloseModal}>
-      <form onSubmit={onCreateChannel}>
-        <Label id="channel-label">
-          <span>채널</span>
-          <Input id="channel" value={newChannel} onChange={onChangeNewChannel} />
+      <form onSubmit={onInviteMember}>
+        <Label id="member-label">
+          <span>이메일</span>
+          <Input id="member" value={newMember} onChange={onChangeNewMember} />
         </Label>
-        <Button type="submit">생성하기</Button>
+        <Button type="submit">초대하기</Button>
       </form>
     </Modal>
   );
 };
 
-export default CreateChannelModal;
+export default InviteChannelModal;
