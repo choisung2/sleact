@@ -9,6 +9,7 @@ import {
   ProfileModal,
   RightMenu,
   WorkspaceButton,
+  WorkspaceModal,
   WorkspaceName,
   Workspaces,
   WorkspaceWrapper,
@@ -21,22 +22,37 @@ import useSWR from 'swr';
 import gravatar from 'gravatar';
 import Menu from '@components/Menu';
 import { Link } from 'react-router-dom';
-import { IUser } from '@typings/db';
+import { IChannel, IUser } from '@typings/db';
 import { Button, Input, Label } from '@pages/SignUp/styles';
 import useInput from '@hooks/useInput';
 import Modal from '@components/Modal';
 import { toast } from 'react-toastify';
+import CreateChannelModal from '@components/CreateChannelModal';
+import { useParams } from 'react-router';
 
 const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showCreateWorkspaceModal, setShowCreateWorkspaceModal] = useState(false);
-  const [newWorkspace, onChangeNewWorkspace, setNewWorkspace] = useInput('')
-  const [newUrl, onChangeNewUrl, setNewUrl] = useInput('')
-  const [changeUrl, onChangeUrl, setChangeUrl] = useInput('')
+  const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
+  const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
+  const [newWorkspace, onChangeNewWorkspace, setNewWorkspace] = useInput('');
+  const [newUrl, onChangeNewUrl, setNewUrl] = useInput('');
+  const [changeUrl, onChangeUrl, setChangeUrl] = useInput('');
 
-  const { data: userData, error, mutate } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
+  const { workspace } = useParams<{ workspace: string }>();
+
+  const {
+    data: userData,
+    error,
+    mutate,
+  } = useSWR<IUser | false>('http://localhost:3095/api/users', fetcher, {
     dedupingInterval: 2000,
   });
+
+  const { data: channelData } = useSWR<IChannel[]>(
+    userData ? `http://localhost:3095/api/workspaces/${workspace}/channels` : null,
+    fetcher,
+  );
 
   const onLogout = useCallback(() => {
     axios
@@ -49,45 +65,60 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   }, []);
 
   const onCloseUserProfile = useCallback((e: any) => {
-    console.log('close');
-    e.stopPropagation
+    e.stopPropagation;
     setShowUserMenu(false);
-  }, [])
+  }, []);
 
   const onClickUserProfile = useCallback(() => {
-    console.log('click')
     setShowUserMenu((prev) => !prev);
   }, []);
 
   const onClickCreateWorkspace = useCallback(() => {
-    setShowCreateWorkspaceModal(true)
-  }, [])
+    setShowCreateWorkspaceModal(true);
+  }, []);
 
-  const onCreateWorkspace = useCallback((e: any) => {
-    e.preventDefault()
-    if (!newWorkspace || !newWorkspace.trim()) return
-    if (!newUrl || !newUrl.trim()) return
-    axios.post('http://localhost:3095/api/workspaces', {
-      workspace: newWorkspace,
-      url: newUrl
-    }, {
-      withCredentials: true
-    })
-      .then(() => {
-        mutate()
-        setShowCreateWorkspaceModal(false)
-        setNewWorkspace('')
-        setNewUrl('')
-      })
-      .catch((err) => {
-        toast.error(err.response?.data, { position: "bottom-center" })
-      })
-  }, [newWorkspace, newUrl])
+  const onCreateWorkspace = useCallback(
+    (e: any) => {
+      e.preventDefault();
+      if (!newWorkspace || !newWorkspace.trim()) return;
+      if (!newUrl || !newUrl.trim()) return;
+      axios
+        .post(
+          'http://localhost:3095/api/workspaces',
+          {
+            workspace: newWorkspace,
+            url: newUrl,
+          },
+          {
+            withCredentials: true,
+          },
+        )
+        .then(() => {
+          mutate();
+          setShowCreateWorkspaceModal(false);
+          setNewWorkspace('');
+          setNewUrl('');
+        })
+        .catch((err) => {
+          toast.error(err.response?.data, { position: 'bottom-center' });
+        });
+    },
+    [newWorkspace, newUrl],
+  );
 
   const onCloseModal = useCallback(() => {
-    setShowCreateWorkspaceModal(false)
-    console.log('close')
-  }, [])
+    setShowCreateWorkspaceModal(false);
+    setShowCreateChannelModal(false);
+    console.log('close');
+  }, []);
+
+  const toggleWorkspaceModal = useCallback(() => {
+    setShowWorkspaceModal((prev) => !prev);
+  }, []);
+
+  const onClickAddChannel = useCallback(() => {
+    setShowCreateChannelModal(true);
+  }, []);
 
   if (!userData) {
     return <Navigate to="/login" />;
@@ -114,18 +145,30 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
         </span>
       </RightMenu>
       <WorkspaceWrapper>
-        <Workspaces>{userData?.Workspaces.map((v) => {
-          return (
-            <Link key={v.id} to={`/workspace/${123}/channel/일반`}>
-              <WorkspaceButton>{v.name.slice(0, 1).toUpperCase()}</WorkspaceButton>
-            </Link>
-          )
-        })}
+        <Workspaces>
+          {userData?.Workspaces.map((v) => {
+            return (
+              <Link key={v.id} to={`/workspace/${123}/channel/일반`}>
+                <WorkspaceButton>{v.name.slice(0, 1).toUpperCase()}</WorkspaceButton>
+              </Link>
+            );
+          })}
           <AddButton onClick={onClickCreateWorkspace}>+</AddButton>
         </Workspaces>
         <Channels>
-          <WorkspaceName>Sleact</WorkspaceName>
-          <MenuScroll>MenuScroll</MenuScroll>
+          <WorkspaceName onClick={toggleWorkspaceModal}>Sleact</WorkspaceName>
+          <MenuScroll>
+            <Menu show={showWorkspaceModal} onCloseModal={toggleWorkspaceModal} style={{ top: 95, left: 80 }}>
+              <WorkspaceModal>
+                <h2>Sleact</h2>
+                <button onClick={onClickAddChannel}>채널 만들기</button>
+                <button onClick={onLogout}>로그아웃</button>
+              </WorkspaceModal>
+            </Menu>
+            {channelData?.map((v) => (
+              <div key={v.id}>{v.name}</div>
+            ))}
+          </MenuScroll>
         </Channels>
         <Chats>Chats</Chats>
       </WorkspaceWrapper>
@@ -142,7 +185,11 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
           <Button type="submit">생성하기</Button>
         </form>
       </Modal>
-      {/* {children} */}
+      <CreateChannelModal
+        show={showCreateChannelModal}
+        onCloseModal={onCloseModal}
+        setShowCreateChannelModal={setShowCreateChannelModal}
+      />
     </div>
   );
 };
