@@ -52,14 +52,14 @@ const SignUp = () => {
           .catch((err) => {
             setSignUpError(err.response.data);
           })
-          .finally(() => {});
+          .finally(() => { });
       }
     },
     [email, nickname, password, passwordCheck, mismatchError],
   );
 
   if (data) {
-    return <Navigate to="/workspace/channel" />;
+    return <Navigate to="/workspace/sleact/channel/일반" />;
   }
 
   return (
