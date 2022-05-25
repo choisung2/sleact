@@ -25,6 +25,7 @@ import { IUser } from '@typings/db';
 import { Button, Input, Label } from '@pages/SignUp/styles';
 import useInput from '@hooks/useInput';
 import Modal from '@components/Modal';
+import { toast } from 'react-toastify';
 
 const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -47,6 +48,12 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
       });
   }, []);
 
+  const onCloseUserProfile = useCallback((e: any) => {
+    console.log('close');
+    e.stopPropagation
+    setShowUserMenu(false);
+  }, [])
+
   const onClickUserProfile = useCallback(() => {
     console.log('click')
     setShowUserMenu((prev) => !prev);
@@ -56,11 +63,29 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
     setShowCreateWorkspaceModal(true)
   }, [])
 
-  const onCreateWorkspace = useCallback(() => {
-    setShowCreateWorkspaceModal(false)
-  }, [])
+  const onCreateWorkspace = useCallback((e: any) => {
+    e.preventDefault()
+    if (!newWorkspace || !newWorkspace.trim()) return
+    if (!newUrl || !newUrl.trim()) return
+    axios.post('http://localhost:3095/api/workspaces', {
+      workspace: newWorkspace,
+      url: newUrl
+    }, {
+      withCredentials: true
+    })
+      .then(() => {
+        mutate()
+        setShowCreateWorkspaceModal(false)
+        setNewWorkspace('')
+        setNewUrl('')
+      })
+      .catch((err) => {
+        toast.error(err.response?.data, { position: "bottom-center" })
+      })
+  }, [newWorkspace, newUrl])
 
   const onCloseModal = useCallback(() => {
+    setShowCreateWorkspaceModal(false)
     console.log('close')
   }, [])
 
@@ -75,7 +100,7 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
         <span onClick={onClickUserProfile}>
           <ProfileImg src={gravatar.url(userData.email, { s: '28px', d: 'retro' })} alt={userData.email} />
           {showUserMenu && (
-            <Menu style={{ right: 0, top: 38 }} show={showUserMenu} onCloseModal={onClickUserProfile}>
+            <Menu style={{ right: 0, top: 38 }} show={showUserMenu} onCloseModal={onCloseUserProfile}>
               <ProfileModal>
                 <img src={gravatar.url(userData.email, { s: '36px', d: 'retro' })} alt={userData.email} />
                 <div>
@@ -111,8 +136,8 @@ const Workspace: FC<React.PropsWithChildren<{}>> = ({ children }) => {
             <Input id="workspace" value={newWorkspace} onChange={onChangeNewWorkspace} />
           </Label>
           <Label id="workspace-url-label">
-            <span>워크스페이스 이름</span>
-            <Input id="workspace" value={newUrl} onChange={onChangeUrl} />
+            <span>워크스페이스 url</span>
+            <Input id="workspace" value={newUrl} onChange={onChangeNewUrl} />
           </Label>
           <Button type="submit">생성하기</Button>
         </form>
